@@ -1,7 +1,1 @@
-# DS-Portfolio
-
-  Xavier University Summer Project
-    README.md
-
-  Hamilton County Election Research
-    README.md
+Sawyer Hurley's data science project portfolio.
