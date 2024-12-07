@@ -3,4 +3,4 @@
 
 • Collaborated with others on the direction of our research, how to incorporate external feedback, and the best ways to represent our findings to produce the most impactful analysis for the university.
 
-•Assembled, delivered, and presented regular findings to Associate Provosts in support of our ongoing research and analysis.
+• Assembled, delivered, and presented regular findings to Associate Provosts in support of our ongoing research and analysis.
