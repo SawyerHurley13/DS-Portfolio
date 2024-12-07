@@ -1,0 +1,1117 @@
+---
+title: "DSCI INTERN 2024"
+format: html
+editor: visual
+---
+
+## DSCI Information for Core
+
+```{r}
+# install.packages("tidyverse")
+# install.packages("readxl")
+# install.packages("dplyr")
+# install.packages("reshape2")
+# install.packages("tidyr")
+# install.packages("ggplot2")
+# install.packages("patchwork")
+#install.packages("writexl")
+```
+
+Runs required packages and assigns the data set to a variable
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(dplyr)
+library(reshape2)
+library(tidyr)
+library(ggplot2)
+library(patchwork)
+library(writexl)
+my_data <- read_excel("CoreRequirements2015-2023.xlsx")
+data2 <- read_excel("RetainedStudents2015-2021.xlsx")
+CoreReqsMajors <- read_excel("Core Reqs Majors.xlsx")
+Data <- my_data
+Core_Majors_Final <- CoreReqsMajors
+reqs <- read_xlsx("CoursesInMajors.xlsx")
+
+
+
+
+lookup <- c("CORE 100" = "CORE 100",
+            "PHIL 100" = "PHIL 100",
+            "THEO 111" = "THEO 111",
+            "English" = "English",
+            "language" = "Language",
+            "Lit and Moral Imagination" = "Lit & Moral Imag",
+            "Scientific Perspectives Lect" = "Scientific Persp Lect",
+            "Scientific Perspectives Lab" = "Scientific Persp Lab",
+            "Nat Science Elect Lecture Core" = "Nat Science Lecture",
+            "Nat Science Elect Lab Core" = "Nat Science Lab",
+            "ERS Focus Elective" = "ERS Focus Elective",
+            "Diversity Flag" = "Diversity Flag",
+            "Creative Perspectives" = "Creative Persp",
+            "Historical Perspectives" = "Historical Persp",
+            "Mathematical Perspectives" = "Mathematical Persp",
+            "Quantitative Reason Flag Full" = "Quant Reasoning Flag",
+            "Philosophy Perspectives" = "Philosophy Persp",
+            "Theology Perspectives" = "Theology Persp",
+            "Social Science Elective Core" = "Social Science",
+            "Humanities Elective" = "Humanities",
+            "Oral Communication Flag" = "Oral Comm Flag",
+            "Writing Flag Core" = "Writing Flag")    
+
+
+
+
+```
+
+In this barplot, the percentage of enrollment for each semester is shown with the corresponding bar. The 9+ category includes values from 9 all the way up to 20, and the Sum category includes the all classes taken at Xavier in the summer.
+
+```{r}
+
+## creates new data frame
+semesterv2 <- select(Data, Major, Term, Degree, `Semester Number at Xavier`) 
+
+# Ensure the column is character if it's a factor
+semesterv2$`Semester Number at Xavier` <- as.character(semesterv2$`Semester Number at Xavier`)
+
+# Convert to numeric
+semesterv2$`Semester Number at Xavier` <- as.numeric(semesterv2$`Semester Number at Xavier`)
+
+# Apply the mutation and save changes back to semesterv2
+semesterv2 <- semesterv2 %>%
+  mutate(`Semester Number at Xavier` = if_else(`Semester Number at Xavier` > 20, "Sum",
+                                               if_else(`Semester Number at Xavier` >= 9 & `Semester Number at Xavier` <= 20, "9+",
+                                                       as.character(`Semester Number at Xavier`))))
+
+
+# Create barplot using ggplot2(Similar plot to previous code)
+ggplot(semesterv2, aes(x = `Semester Number at Xavier`,)) +
+  geom_bar(aes(y = (after_stat(count))/sum(after_stat(count))*100), fill = "red", color = "black") +
+  labs(title = "Enrollment in Core Classes by Semester", y = 'Percentage of Core Courses (%)') +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 20))
+```
+
+Here, you can choose which specific class you want to see the percent enrollment in by semester. The 9+ value remains the same as previously stated, but we took out the summer category.
+
+```{r}
+#Core by semester per class
+indiv.courses = colnames(Data)[12:33]
+
+for (X in indiv.courses)
+{
+  temp <- Data %>%
+    select(`Semester Number at Xavier`, sym(X)) %>%
+    filter(!!sym(X) == "1") %>%
+    mutate(`Semester Number at Xavier` = case_when(
+      as.numeric(`Semester Number at Xavier`) >= 200000 ~ "Summer",
+      as.numeric(`Semester Number at Xavier`) > 8 ~ "9+",
+      TRUE ~ `Semester Number at Xavier` # Default case, if none of the above conditions are met
+    )
+    ) 
+  
+  print(ggplot(temp,aes(x = `Semester Number at Xavier`))+
+          geom_bar(aes(y = (after_stat(count))/sum(after_stat(count))*100), fill = "blue", color = "black") +
+          labs(title = paste("Enrollment in",X,"Course by Semester"), y = "Percentage of Courses (%)"))
+}
+```
+
+```{r}
+stem_majors <- c("APPH", "MACS", "BIOC", "BSFB", "BIOL", "BIMS", "BIOP", "CHEM", "CSCI", "DSCI", "ECON", "ENPH", "ENVS", "MATH", "PHYS")
+humanities_social_sciences_majors <- c("ADVT", "ARTS", "CLHU", "CMST", "DIFT", "DIME", "ECSS", "ENGL", "FREN", "GDST", "GRAP", "HIST", "INST", "MVED", "MUSC", "MUTR", "ORGL", "PHIL", "PPPU", "POLI", "PUBL", "SOCI", "SPAN", "THTR", "THED", "THEO", "EXPL", "LART")
+nursing_majors <- c("NURE", "NURS")
+others_cps_majors <- c("CJUS", "EXES", "HSEA", "PSYC", "SOCW", "SPMG", "SPMK")
+education_majors <- c("MCED", "MONT", "ECED", "SPEC", "ELEM", "TLSC", "SEDU")
+business_majors <- c("ACCT", "BAIS", "BUNN", "ECON", "ENTR", "FINC", "INBU", "MGMT", "MKTG")
+
+
+categorize_major <- function(major) {
+  if (major %in% stem_majors) {
+    return("STEM")
+  } else if (major %in% humanities_social_sciences_majors) {
+    return("Humanities/Social Sciences")
+  } else if (major %in% business_majors) {
+    return("Business")
+  } else if (major %in% nursing_majors) {
+    return("Nursing")
+  } else if (major %in% education_majors) {
+    return("Education")
+  } else if (major %in% others_cps_majors) {
+    return("Other/CPS")
+  } else {
+    return("Unknown")
+  }
+}
+xumajor <- select(Data, `Cohort Code`, `Semester Number at Xavier`, Major)
+
+# Filter the data to include only rows where Cohort Code == "NF"
+xumajor <- Data %>%
+  filter(`Cohort Code` == "NT")
+
+Data$MajorCategory <- sapply(Data$Major, categorize_major)
+
+test_majors <- c("SPMG", "ENTR", "ECON", "PSYC", "EXES", "LART", "HSEA", "NURE", "CSCI", "INBU", "ACCT", "CSCA", "UDEC", "EXPL", "DIME", "ADVE",
+                 "ENGL", "BIOL", "MATH", "PPPU", "ENPH", "MUSC", "MKTG", "BUUN", "MGMT", "APPH", "GRAP", "SOCW", "SPEC", "RADT", "FINC", "SPMK",
+                 "POLI", "MCED", "ECED", "MONT", "CLPL", "CPHA", "INFO", "OCTH", "SUST", "CJUS", "ATTR", "CMST", "CAUN", "SPAN", "0000", "PUBL",
+                 "LSFB", "LAND", "SOCI", "HIST", "THED", "NATS", "CHEM", "ECOS", "SHRM", "ARTS", "INST", "CHMS", "MACS", "THTR", "THEO", "MAKE",
+                 "ECSS", "PPHM", "FREN", "BIOP", "DIFT", "GDST", "PHIL", "BANL", "PHYS", "ENVS", "MUED", "MLIE", "NURS", "HESA", "ORGL", "SECD",
+                 "CLHU", "ARTF", "EMED", "APCH", "MACC", "APBI", "BIMS", "RDSP", "SED1", "GERM", "PERM", "PIPG", "NUP1", "FREF", "TLFS", "MUTR",
+                 "CLAS", "MBAN", "XTRA", "ELEM", "TLSC", "PMBA", "BAIS", "TLSP", "BSFB", "ENGE", "MBA1", "PRIE", "HES1", "CJU1", "SEDU", "CMHC",
+                 "ENTI", "ORG1", "PHIH", "TINS", "BIOC", "DSCI", "TPHS")
+
+categorized_majors <- sapply(test_majors, categorize_major)
+unassigned_majors <- test_majors[categorized_majors == "Unknown"]
+print(unassigned_majors)
+
+##Create 6 bar plots for each major category in one screen
+
+xumajor <- select(Data,`Semester Number at Xavier`, Major, )
+
+xumajor$`Semester Number at Xavier` <- as.character(xumajor$`Semester Number at Xavier`)
+
+# Convert to numeric
+xumajor$`Semester Number at Xavier` <- as.numeric(xumajor$`Semester Number at Xavier`)
+
+xumajor <- xumajor %>%
+  mutate(`Semester Number at Xavier` = if_else(`Semester Number at Xavier` > 20, "Sum",
+                                               if_else(`Semester Number at Xavier` >= 9 & `Semester Number at Xavier` <= 20, "9+",
+                                                       as.character(`Semester Number at Xavier`))))
+
+xumajor$MajorCategory <- sapply(Data$Major, categorize_major)
+
+xumajor <- xumajor %>%
+  filter(MajorCategory != "Unknown")
+
+xumajor <- xumajor %>%
+  group_by(MajorCategory, `Semester Number at Xavier`) %>%
+  summarise(Count = n()) %>%
+  mutate(Percentage = Count / sum(Count))
+
+
+ggplot(xumajor, aes(x = `Semester Number at Xavier`, y = Percentage, fill = MajorCategory)) +
+  geom_bar(position = "dodge", stat = "identity") +
+ # geom_text(aes(label = sprintf("%.0f%%", Percentage * 100)),
+  #          vjust = -0.5, position = position_dodge(0.9), size = 3.25) +
+  labs(title = "Distribution of Semester Numbers by Major Category",
+       x = "Semester Number",
+       y = "Percentage of Enrollments(%)",
+       fill = "Major Category") +
+  scale_y_continuous(labels = scales::percent,
+                     breaks = seq(0, 0.30, by = 0.05)) +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12)) +
+  facet_wrap(~ MajorCategory, scales = "fixed")
+```
+
+This boxplot represents the average range that all students fulfill their core requirements. Semesters 9 and up are all combined in the 9 on the x-axis. The boxes are arranged in the order of medians to show the timing more clearly.
+
+```{r}
+#Single graph of all courses in 1 group
+Data %>%
+  mutate(`Semester Number at Xavier` = 
+           case_when(
+             as.numeric(`Semester Number at Xavier`) > 8 ~ "9",
+             TRUE ~ `Semester Number at Xavier` # Default case, if none of the above conditions are me
+           )
+  ) %>% 
+  filter(!as.numeric(`Semester Number at Xavier`)>200000) %>% 
+  pivot_longer(cols = 12:33, names_to = "Requirement",values_to = 'filled') %>% 
+    mutate(Requirement = lookup[Requirement]) %>% 
+  filter(filled==1) %>% 
+  ggplot(aes(x = as.numeric(`Semester Number at Xavier`), y = reorder(Requirement,as.numeric(`Semester Number at Xavier`), mean))) + 
+  geom_boxplot(fill='lightblue', color = "black")+
+  labs(title="Timing of Core Courses, 2015-2023 (All Students)", x ="Semester", y = "Core Curriculum Requirement") +
+  scale_x_continuous(breaks = seq(1,9, by = 1))
+```
+
+In the following graphs, we organized each major into 1 of 6 categories. The boxplot shows what semester each course was taken with respect to the corresponding groups.
+
+```{r}
+#Courses by groups
+filtered <- Data %>% 
+  filter(Degree != "AA" & Degree != "NDPG" & Degree != "NDPU"& Degree != "MOT"&Degree != "MS"&Degree != "MBA"&Degree != "MA"&Degree != "MED"&Degree != "AS")
+
+# Combine data manipulation for all groups
+combined_data <- filtered %>% 
+  filter(as.numeric(`Semester Number at Xavier`) <= 8) %>% 
+  pivot_longer(cols = 12:33, names_to = "Requirement", values_to = "Filled") %>%
+  mutate(Requirement = lookup[Requirement]) %>%
+  filter(Filled == "1") %>% 
+
+mutate(Group = case_when(
+  Major %in% c("APPH", "MACS", "BIOC", "BSFB", "BIOL", "BIMS", "BIOP", "CHEM", "CSCI", "DSCI","ENPH", "ENVS", "MATH", "PHYS") ~ "Stem",
+  Major %in% c("ADVE", "ARTS", "CLHU", "CMST", "DIFT", "DIME", "ECSS", "ENGL", "FREN", "GDST", "GRAP", "HIST", "INST", "MVED", "MUSC", "MUTR", "ORGL", "PHIL", "PPPU", "POLI", "PUBL", "SOCI", "SPAN", "THTR", "THED", "THEO", "EXPL", "LART") ~ "Humanities/Social Science",
+  Major %in% c("ACCT", "BAIS", "BUNN", "ECON", "ENTR", "FINC", "INBU", "MGMT", "MKTG") ~ "WCB Majors",
+  Major %in% c("MCED", "MONT", "ECED", "SPEC", "ELEM", "TLSC", "SEDU") ~ "Education",
+  Major %in% c("NURS", "NURE") ~ "Nursing",
+  Major %in% c("CJUS", "EXES", "HSEA", "PSYC", "SOCW", "SPMG", "SPMK") ~ "Other/CPS",
+  TRUE~NA_character_ # excludes default case
+)) %>% 
+  filter(!is.na(Group))
+
+
+# Plotting with facets
+ggplot(combined_data, aes(x = as.numeric(`Semester Number at Xavier`), y = reorder(Requirement, as.numeric(`Semester Number at Xavier`), mean))) +
+  geom_boxplot(fill = "light blue", color = "black") +
+  theme_minimal() +
+  labs(title = "Timing of Core Courses 2015-2023", x = "Semesters", y = "Core Curriculum") +
+  facet_wrap(~ Group, scales = "free_y")
+```
+
+We created the same boxplot as the previous one but we filtered out all transfer students so the plot only shows information for students who came into Xavier as freshman. The graph shows differences but nothing too impactful.
+
+```{r}
+#New Freshman
+filtered <- my_data %>% 
+  filter(Degree != "AA" & Degree != "NDPG" & Degree != "NDPU"& Degree != "MOT"&Degree != "MS"&Degree != "MBA"&Degree != "MA"&Degree != "MED"&Degree != "AS" & `Cohort Code`=="NF")
+
+
+nf_boxplots <- filtered %>%
+  filter(as.numeric(`Semester Number at Xavier`) <= 8) %>%
+  pivot_longer(cols = 12:33, names_to = "Requirement", values_to = "Filled") %>%
+  mutate(Requirement = lookup[Requirement]) %>%
+  filter(Filled == "1") %>%
+  mutate(Group = case_when(
+    Major %in% c("MACS"," APPH", "BIOC", "BSFB", "BIOL", "BIMS", "BIOP", "CHEM", "CSCI", "DSCI","ENVS","MATH", "PHYS", 
+                 "ENPH", "MATH", "PHYS", "CSCA") ~ "Stem",
+    Major %in% c("ADVT", "ARTS", "CLHU", "CMST", "DIF", "DIME", "ECSS", "ENGL", "FREN", "GDST", "GRAP", "HIST", 
+                 "INST", "MUED", "MUSC", "MUTR", "ORGL", "PHIL", "PPPU", "POLI", "PUBL", "SOCI", "SPAN","THTR",
+                 "THED","THEO") ~ "Humanities/Social Science",
+    Major %in% c("ACCT", "BAIS", "BUUN", "ECON", "ENTR", "FINC", "INBU", "MGMT", "MKTG") ~ "Business",
+    Major %in% c("ECED", "MCED", "MONT", "SPEC","ELEM", "TLSC", "SEDU") ~ "Education",
+    Major %in% c("NURS", "NURE") ~ "Nursing",
+    Major %in% c("CJUS","EXES","HSEA", "PSYC", "SOCW","SPMG","SPMK") ~ "Other/CPS",
+    TRUE~NA_character_ # excludes default case
+  )) %>% 
+  filter(!is.na(Group))
+# Plotting with facets
+ggplot(nf_boxplots, aes(x = as.numeric(`Semester Number at Xavier`), y = reorder(Requirement, as.numeric(`Semester Number at Xavier`), mean))) +
+  geom_boxplot(fill = "light blue", color = "black") +
+  theme_minimal() +
+  labs(title = "Timing of Core Courses for New Freshman (NF) Students 2015-2023", x = "Semesters", y = "Core Curriculum") +
+  facet_wrap(~ Group, scales = "free_y")
+```
+
+Then we did the opposite and made a plot for only new transfer students, filtering out all other students. It shows slight differences but nothing major.
+
+```{r}
+#New Transfers
+filtered <- my_data %>% 
+  filter(Degree != "AA" & Degree != "NDPG" & Degree != "NDPU"& Degree != "MOT"&Degree != "MS"&Degree != "MBA"&Degree != "MA"&Degree != "MED"& Degree != "AS" & `Cohort Code`=="NT")
+
+nt_boxplots <- filtered %>%
+  filter(as.numeric(`Semester Number at Xavier`) <= 8) %>%
+  pivot_longer(cols = 12:33, names_to = "Requirement", values_to = "Filled") %>%
+  mutate(Requirement = lookup[Requirement]) %>%
+  filter(Filled == "1") %>%
+  mutate(Group = case_when(
+    Major %in% c("MACS"," APPH", "BIOC", "BSFB", "BIOL", "BIMS", "BIOP", "CHEM", "CSCI", "DSCI","ENVS", "ECON", "MATH", "PHYS", 
+                 "ENPH", "MATH", "PHYS", "CSCA") ~ "Stem",
+    Major %in% c("ADVT", "ARTS", "CLHU", "CMST", "DIF", "DIME", "ECSS", "ENGL", "FREN", "GDST", "GRAP", "HIST", 
+                 "INST", "MUED", "MUSC", "MUTR", "ORGL", "PHIL", "PPPU", "POLI", "PUBL", "SOCI", "SPAN","THTR",
+                 "THED","THEO") ~ "Humanities/Social Science",
+    Major %in% c("ACCT", "BAIS", "BUUN", "ECON", "ENTR", "FINC", "INBU", "MGMT", "MKTG") ~ "Business",
+    Major %in% c("ECED", "MCED", "MONT", "SPEC","ELEM", "TLSC", "SEDU") ~ "Education",
+    Major %in% c("NURS", "NURE") ~ "Nursing",
+    Major %in% c("CJUS","EXES","HSEA", "PSYC", "SOCW","SPMG","SPMK") ~ "Other/CPS",
+    TRUE~NA_character_ # excludes default case
+  )) %>% 
+  filter(!is.na(Group))
+# Plotting with facets
+ggplot(nt_boxplots, aes(x = as.numeric(`Semester Number at Xavier`), y = reorder(Requirement, as.numeric(`Semester Number at Xavier`), mean))) +
+  geom_boxplot(fill = "light blue", color = "black") +
+  theme_minimal() +
+  labs(title = "Timing of Core Courses for New Transfer (NT) Students 2015-2023", x = "Semesters", y = "Core Curriculum") +
+  facet_wrap(~ Group, scales = "free_y")
+```
+
+This graph displays the distribution of credits earned during the summer at Xavier by percentage.
+
+```{r}
+#Summer core
+Data %>%
+  mutate(`Semester Number at Xavier` = case_when(
+    as.numeric(`Semester Number at Xavier`) > 20000~ "Summer",
+    as.numeric(`Semester Number at Xavier`)>8 ~ "9+",
+    TRUE ~ as.character(Data$`Semester Number at Xavier`))) %>%
+  filter(str_detect(`Semester Number at Xavier`,"Summer")) %>%
+  pivot_longer(12:33, names_to = "Credit", values_to = "Taken") %>%
+  mutate(Credit = lookup[Credit]) %>%
+  filter(Taken =="1") %>%
+  mutate(Credit = factor(Credit, levels = unique(Credit))) %>%
+  group_by(Credit) %>%
+  summarize(count = n()) %>%
+  ungroup() %>% # 95->97 do the job similar to table() --> counting observations of each requirement
+  mutate(count = (after_stat(count))/sum(after_stat(count))*100) %>%
+  mutate(Credit = fct_reorder(Credit, count, .desc = FALSE)) %>%
+  ggplot(aes(x = Credit, y = count) )+ # need to reorder the bars for visualizing purpose
+  geom_bar(stat = "identity", fill= "lightblue", color="black")+
+  geom_text(aes(label= round(count)),hjust = -0.5)+
+  labs(title = "Core Requirements Fulfilled During Summer", x ="Requirements", y = "Percentage of students")+
+  coord_flip()
+```
+
+After looking at the summer requirements that were filled, we decided to specify that data to certain groups. This barplot represents the same data but applied only to new transfers from summer courses. We found that the distribution was relatively similar to that of all students
+
+```{r}
+#summer new transfers
+common_levels <- Data %>%
+  filter(`Cohort Code` %in% c("NF")) %>%
+  mutate(`Semester Number at Xavier` = case_when(
+    as.numeric(`Semester Number at Xavier`) > 20000 ~ "Summer",
+    as.numeric(`Semester Number at Xavier`) > 8 ~ "9+",
+    TRUE ~ as.character(`Semester Number at Xavier`)
+  )) %>%
+  filter(str_detect(`Semester Number at Xavier`, "Summer")) %>%
+  pivot_longer(cols = 12:33, names_to = "Credit", values_to = "Taken") %>%
+    mutate(Credit = lookup[Credit]) %>%
+  filter(Taken == "1") %>%
+  group_by(Credit) %>%
+  summarize(count = n(), .groups = 'drop') %>%
+  mutate(perc = count / sum(count) * 100) %>%
+  arrange(perc) %>%
+  pull(Credit)
+
+NT_plot <- Data %>%
+  filter(`Cohort Code` == "NT") %>%
+  mutate(`Semester Number at Xavier` = case_when(
+    as.numeric(`Semester Number at Xavier`) > 20000 ~ "Summer",
+    as.numeric(`Semester Number at Xavier`) > 8 ~ "9+",
+    TRUE ~ as.character(`Semester Number at Xavier`)
+  )) %>%
+  filter(str_detect(`Semester Number at Xavier`, "Summer")) %>%
+  pivot_longer(cols = 12:33, names_to = "Credit", values_to = "Taken") %>%
+    mutate(Credit = lookup[Credit]) %>%
+  filter(Taken == "1") %>%
+  group_by(Credit) %>%
+  summarize(count = n(), .groups = 'drop') %>%
+  mutate(count = count / sum(count) * 100) %>%
+  mutate(Credit = factor(Credit, levels = common_levels)) %>%
+  ggplot(aes(x = Credit, y = count)) +
+  geom_bar(stat = "identity", fill = "lightblue", color = "black") +
+  geom_text(aes(label = round(count)), hjust = -0.5) +
+  labs(title = "Requirements Fulfilled During Summer for New Transfers (NT)",
+       x = "Requirements",
+       y = "Proportion of Students") +
+  coord_flip()
+
+print(NT_plot)
+```
+
+Next we did the same but instead of new transfers we used new freshman. We found some similarities to that of new transfers but noticed a difference in the timing of natural science courses.
+
+```{r}
+#summer new transfers
+common_levels <- Data %>%
+  filter(`Cohort Code` %in% c("NF")) %>%
+  mutate(`Semester Number at Xavier` = case_when(
+    as.numeric(`Semester Number at Xavier`) > 20000 ~ "Summer",
+    as.numeric(`Semester Number at Xavier`) > 8 ~ "9+",
+    TRUE ~ as.character(`Semester Number at Xavier`)
+  )) %>%
+  filter(str_detect(`Semester Number at Xavier`, "Summer")) %>%
+  pivot_longer(cols = 12:33, names_to = "Credit", values_to = "Taken") %>%
+      mutate(Credit = lookup[Credit]) %>%
+  filter(Taken == "1") %>%
+  group_by(Credit) %>%
+  summarize(count = n(), .groups = 'drop') %>%
+  mutate(perc = count / sum(count) * 100) %>%
+  arrange(perc) %>%
+  pull(Credit)
+
+
+NF_plot <- Data %>%
+  filter(`Cohort Code` == "NF") %>%
+  mutate(`Semester Number at Xavier` = case_when(
+    as.numeric(`Semester Number at Xavier`) > 20000 ~ "Summer",
+    as.numeric(`Semester Number at Xavier`) > 8 ~ "9+",
+    TRUE ~ as.character(`Semester Number at Xavier`)
+  )) %>%
+  filter(str_detect(`Semester Number at Xavier`, "Summer")) %>%
+  pivot_longer(cols = 12:33, names_to = "Credit", values_to = "Taken") %>%
+      mutate(Credit = lookup[Credit]) %>%
+  filter(Taken == "1") %>%
+  group_by(Credit) %>%
+  summarize(count = n(), .groups = 'drop') %>%
+  mutate(count = count / sum(count) * 100) %>%
+  mutate(Credit = factor(Credit, levels = common_levels)) %>%
+  ggplot(aes(x = Credit, y = count)) +
+  geom_bar(stat = "identity", fill = "lightblue", color = "black") +
+  geom_text(aes(label = round(count)), hjust = -0.5) +
+  labs(title = "Requirements Fulfilled During Summer for New Freshmen (NF)",
+       x = "Requirements",
+       y = "Proportion of Students") +
+  coord_flip()
+
+print(NF_plot)
+
+```
+
+The barplot shows how many required credits were earned by each student at Xavier. Some were 0 as they passed the placement tests or transferred in the required credits. There 2 eleven credit hours due to a 5 credit hour course.
+
+```{r}
+### How many required language credits do students typically take???
+
+language <- Data %>%
+  filter(language == "1") %>%
+  filter(`Cohort Code` == "NF")
+
+
+
+total_langcredit <- language %>%
+  group_by(`Student ID-Random`) %>%
+  summarise(total_value = sum(`Credits earned for this course`))
+
+
+##Total Language Requirement Credits Earned at Xavier Barplot (filtered by NF)
+
+#library(ggplot2)
+
+ggplot(data = total_langcredit, aes(x = total_value))+
+  geom_bar(fill = "#1A1AFF", color = "black")+
+  scale_x_continuous(breaks = seq(0,21, by =3))+
+  geom_text(stat = 'count', aes(label= after_stat(count)), vjust = -.5)+
+  labs(title = "Total Language Requirement Credits Earned", x = "Earned Credits", y = "Count of Students")+
+  theme(plot.title = element_text(size = 18))+
+  theme(axis.title.x = element_text(size = 15))+
+  theme(axis.title.y = element_text(size = 15))+
+  theme(axis.text.x = element_text(size = 12))+
+  theme(axis.text.y = element_text(size = 12))
+```
+
+We then made a barplot for the total amount of attempted language courses for students at Xavier. Most didn't need to attempt a class or only took 1-2 courses. Others failed or withdrew many times and attempted up to 7 language courses.
+
+```{r}
+#find how many students in language
+
+data2 <- read_excel("Copy of RetainedStudents2015-2021.xlsx") %>% 
+  #unite("Student ID-Random", 1:7, sep = " ", remove = TRUE) %>% 
+  pivot_longer(cols = everything(), values_to = "Student ID-Random") %>% 
+  drop_na() %>% 
+  select(`Student ID-Random`) %>% 
+  mutate(Retention =1) 
+
+# Rename columns in data2
+colnames(data2) <- c("Student ID-Random", "Retention_Data")
+# Step 2: Create data1
+data1 <- Data %>% 
+  filter(`Cohort Code` == "NF") %>% 
+  filter(language == 1) %>% 
+  mutate(Retention = 0)
+
+
+# Step 3: Combine 2 datasets
+combined_data2 <- data1 %>%
+  left_join(data2, by = "Student ID-Random") %>%
+  mutate(Retention = coalesce(Retention_Data, Retention)) %>%  # Override Retention with values from data2
+  select(-Retention_Data) 
+
+sample1 <- combined_data2 %>%
+  filter(Retention == "1") %>%
+  pivot_longer(cols = 12:33, names_to = "Credit", values_to = "Taken") %>%
+ # filter(Taken == "1") %>%
+  group_by(`Student ID-Random`, Credit) %>%
+  filter(Credit == "language") %>% 
+  summarise(Class_Count = n(), .groups = 'drop') %>% 
+  select(`Student ID-Random`,Credit, Class_Count)
+
+
+# length(unique(data2$`Student ID-Random`)) - length(unique(data1$`Student ID-Random`))
+# no.language = unique(Data$`Student ID-Random`)[!number_students]
+# no_langcourse = cbind(no.language,0)
+
+
+##Total Language Requirement Credits Earned at Xavier Barplot (filtered by NF)
+
+#library(ggplot2)
+
+ggplot(data = sample1, aes(x = Class_Count))+
+
+  geom_bar(fill = "#D7D3CC", color = "black")+
+
+  scale_x_discrete(breaks = seq(0,10, by =1))+
+
+  geom_text(stat = 'count', aes(label= after_stat(count)), vjust = -.5)+
+
+  labs(x = "Number of Attempted Language Courses", y = "Count of Students")+
+
+  theme(plot.title = element_text(size = 18))+
+
+  theme(axis.title.x = element_text(size = 15))+
+
+  theme(axis.title.y = element_text(size = 15))+
+
+  theme(axis.text.x = element_text(size = 12))+
+
+  theme(axis.text.y = element_text(size = 12))
+```
+
+```{r}
+#find how many students in language
+
+data2 <- read_excel("Copy of RetainedStudents2015-2021.xlsx") %>% 
+  #unite("Student ID-Random", 1:7, sep = " ", remove = TRUE) %>% 
+  pivot_longer(cols = everything(), values_to = "Student ID-Random") %>% 
+  drop_na() %>% 
+  select(`Student ID-Random`) %>% 
+  mutate(Retention =1) 
+
+# Rename columns in data2
+colnames(data2) <- c("Student ID-Random", "Retention_Data")
+# Step 2: Create data1
+data7 <- Data %>% 
+  filter(`Cohort Code` == "NT") %>% 
+  filter(language == 1) %>% 
+  mutate(Retention = 0)
+# Step 3: Combine 2 datasets
+combined_data7 <- data7 %>%
+  left_join(data2, by = "Student ID-Random") %>%
+  mutate(Retention = coalesce(Retention_Data, Retention)) %>%  # Override Retention with values from data2
+  select(-Retention_Data) 
+
+sample7 <- combined_data7 %>%
+  filter(Retention == "1") %>%
+  pivot_longer(cols = 12:33, names_to = "Credit", values_to = "Taken") %>%
+  filter(Taken == "1") %>%
+  group_by(`Student ID-Random`, Credit) %>%
+  summarise(Class_Count = n(), .groups = 'drop') %>% 
+  select(`Student ID-Random`,Credit, Class_Count)
+
+
+
+
+##Total Language Requirement Credits Earned at Xavier Barplot (filtered by NF)
+
+#library(ggplot2)
+
+ggplot(data = sample7, aes(x = Class_Count))+
+
+  geom_bar(fill = "#D7D3CC", color = "black")+
+
+  scale_x_discrete(breaks = seq(0,10, by =1))+
+
+  geom_text(stat = 'count', aes(label= after_stat(count)), vjust = -.5)+
+
+  labs(x = "Number of Attempted Language Courses", y = "Count of Students")+
+
+  theme(plot.title = element_text(size = 18))+
+
+  theme(axis.title.x = element_text(size = 15))+
+
+  theme(axis.title.y = element_text(size = 15))+
+
+  theme(axis.text.x = element_text(size = 12))+
+
+  theme(axis.text.y = element_text(size = 12))
+```
+
+In this barplot, the percentages of all grades in all core classes at Xavier are displayed. The grade scale is A through F and includes pluses and minuses. The W represents the classes that are withdrawn.
+
+```{r}
+#Letter Grades of all Xavier Students for Core Requirements
+Data %>% 
+  filter(!is.na(Grade)) %>% 
+  mutate(Grade = case_when( 
+    Grade %in% c("A", "A-") ~ "A",
+    Grade %in% c("B+", "B", "B-") ~ "B",
+    Grade %in% c("C+", "C", "C-") ~ "C",
+    Grade %in% c("D+", "D") ~ "D",
+    Grade %in% c("F", "VF") ~ "F",
+    Grade == "W" ~ "W",
+    Grade %in% c("I", "AU", "S", "NR", "NA", "IP", "P") ~ "Other"
+  )) %>% 
+  ggplot(aes(x = Grade)) +
+  geom_bar(aes(y = (after_stat(count)) / sum(after_stat(count)) * 100), fill = "skyblue", color = "black") +
+  labs(title = "Letter Grades of Students in All Core Classes", y = 'Percentage of Grades (%)')
+
+```
+
+Here, you can choose which specific core requirement you want to see grade details on. These graphs show the same scale as above, in addition to average GPA and DFW rate.
+
+```{r}
+indiv.courses = colnames(Data)[12:33]
+
+grades <- Data$Grade
+grades_vector <- c("A" = 4, 
+                   "A-" = 3.67, 
+                   "B+" = 3.33, 
+                   "B" = 3, 
+                   "B-" = 2.67, 
+                   "C+" = 2.33, 
+                   "C" = 2, 
+                   "C-" = 1.67, 
+                   "D+" = 1.33, 
+                   "D" = 1, 
+                   "F" = 0, "VF" = 0, "U" = 0)
+numerical_values <- grades_vector[grades]
+Data$numerical_grade <- numerical_values
+
+
+#Wrap Letter Grades barplot by individual Core Requirement
+overall.avg_grade = mean(Data$numerical_grade, na.rm = TRUE) 
+plots_list <-list()
+avg_grade <-c()
+dfw <- c()
+
+#GPA for one specific core requirement
+for (X in indiv.courses) {
+  avg_grade[X] = mean(Data$numerical_grade[Data[,X] == "1"], na.rm = TRUE)
+  dfw[X]= sum(Data$Grade %in% c("D+", "D", "F", "VF", "W")& Data[,X] == "1")/ sum(Data[,X] == "1")*100
+}
+
+
+for (X in indiv.courses[order(avg_grade)]) {
+  temp <- Data %>% 
+    select(Grade, sym(X)) %>% 
+    filter(!!sym(X) == "1") %>% 
+    filter(!is.na(Grade)) %>% 
+    mutate(Grade = case_when( 
+      Grade %in% c("A", "A-") ~ "A",
+      Grade %in% c("B+", "B", "B-") ~ "B",
+      Grade %in% c("C+", "C", "C-") ~ "C",
+      Grade %in% c("D+", "D") ~ "D",
+      Grade %in% c("F", "VF") ~ "F",
+      Grade == "W" ~ "W",
+      Grade %in% c("I", "AU", "S", "NR", "NA", "IP", "P") ~ "Other"
+    )) 
+  
+  #create each individual plot
+  p <- ggplot(temp, aes(x = Grade))+
+    geom_bar(aes(y = (after_stat(count))/sum(after_stat(count))*100), fill = "dodgerblue", color = "black")+
+    labs(title = paste("" ,lookup[X], ""),
+         x = "Grade", y = "Percentage")+
+    ylim(0, 80)+
+    annotate("text", x = Inf, y = Inf, label = paste("GPA:", round(avg_grade[X], 2)),hjust = 1.1, vjust = 1.1, size = 4.2, color = "black")+
+    annotate("text", x = Inf, y = Inf, label = paste("DFW: ", round(dfw[X], 1), "%",sep=''),hjust = 1.1, vjust = 2.5, size = 4.2, color = "black")
+  plots_list[[X]] <- p
+}
+
+#Combine plots side by side
+combined_plots <- wrap_plots(plots_list, ncol = 6)
+combined_plots
+```
+
+This shows the amount of core requirements that can be fulfilled by each major category's requirements. in other words, we can see for each major category how many extra core classes need to be taken aside from required major courses.
+
+```{r}
+required_barplots <- CoreReqsMajors %>%
+  pivot_longer(cols = 4:25, names_to = "Requirement", values_to = "Filled") %>%
+  filter(Filled == "1") %>%
+  mutate(Group = case_when(
+    Major %in% c("MACS", "BIOC", "BSFB", "BIOL", "BIMS", "BIOP", "CHEM", "CSCI", "DSCI","ENPH","ENVS","MATH", "PHYS") ~ "Stem",
+    Major %in% c("ADVT", "ARTS", "CLHU", "CMST", "DIFT", "DIME", "ECSS", "ENGL", "FREN", "GDST", "GRAP", "HIST", 
+                 "INST", "MUED", "MUSC", "MUTR", "ORGL", "PHIL", "PPPU", "POLI", "PUBL", "SOCI", "SPAN","THTR",
+                 "THED","THEO") ~ "Humanities/Social Science",
+    Major %in% c("ACCT", "BAIS", "BUUN", "ECON", "ENTR", "FINC", "INBU", "MGMT", "MKTG") ~ "Business",
+    Major %in% c("CJUS","EXES","HSEA", "PSYC", "SOCW","SPMG","SPMK") ~ "Other/CPS",
+    Major %in% c("MCED", "MONT","ECED", "SPEC","ELEM", "TLSC", "SEDU") ~ "Education",
+    Major %in% c("NURE") ~ "Nursing",
+    TRUE~NA_character_ # excludes default case
+  )) %>% 
+  filter(!is.na(Group)) %>% 
+  group_by(Group,Requirement) %>% 
+  summarise(Total = n(),.groups='drop') %>% 
+  ungroup() %>% 
+  complete(Group,Requirement,fill=list(Total=0))
+
+# Plotting with facets
+ggplot(required_barplots, aes(x = Requirement, y = Total,fill=Group)) +
+  geom_bar(stat="identity",position="dodge",color = "black") +
+  geom_text(aes(label=Total),position = position_dodge(width=0.9),vjust=-0.5,size=3,color="black")+
+  labs(title = "Number of Majors That Contain Each Core Requirement", x = "Categories", y = "Total") +
+  facet_wrap(~ Group, scales = "free")+
+  theme(axis.text.x = element_text(angle=45,vjust=1,hjust=1),
+        strip.text.x = element_text(size=9,face="bold",color="black"),
+        strip.background = element_blank(),
+        strip.placement="outside",
+        plot.margin = margin(t=20,r=10,b=10,l=10,unit="pt"))
+```
+
+Elizabeth's stuff on core courses within the major
+
+```{r}
+reqs$RowSums <- rowSums(reqs[, 4:25], na.rm = TRUE)
+
+reqs$Major <- factor(reqs$Major, levels = reqs$Major[order(-reqs$RowSums, reqs$Category)])
+
+# What percent of the Core is fulfilled in each major?
+reqs %>% 
+  filter(Major != "NURS") %>% 
+  ggplot(aes(x = reorder(Major, -RowSums), y = (RowSums/22), fill = Category)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Major", y = "Proportion of Requirements", title = "Reqs Fulfilled by Majors") +
+  scale_y_continuous(breaks = seq(0,0.6, by = 0.1)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  scale_fill_manual(values = c("Stem" = "green", "Hum/SocSci" = "purple", "Business" = "blue", "CPS" = "red", "Education" = "orange", "Nursing" = "yellow"))
+
+```
+
+```{r}
+
+# What percent of majors fulfill each Core Requirement?
+reqs2 <- reqs %>% 
+  filter(Major != "NURS")
+
+reqs2 <- reqs2[, 4:25]
+
+# Step 1: Calculate column sums
+ColSums <- colSums(reqs2)
+
+# Calculate percentages relative to a total of 63
+percentages <- (ColSums / 63) * 100
+
+# Step 2: Combine column names and percentages into a data frame
+summary_data <- data.frame(ColNames = colnames(reqs2), Percent = percentages)
+
+summary_data$ColNames <- factor(summary_data$ColNames, levels = summary_data$ColNames[order(summary_data$Percent, decreasing = FALSE)])
+
+
+# Step 3: Plot using ggplot2
+ggplot(summary_data, aes(x = Percent, y = ColNames)) +
+  geom_bar(stat = "identity", fill = "hotpink") +
+  labs(x = "Percent of Majors (%)", y = "Requirement", title = "What Percent of Majors Fulfill each Core Requirement") +
+  theme_minimal()
+```
+
+```{r}
+data <- my_data
+
+
+data2 <- read_excel("Copy of RetainedStudents2015-2021.xlsx") %>% 
+  #unite("Student ID-Random", 1:7, sep = " ", remove = TRUE) %>% 
+  pivot_longer(cols = everything(), values_to = "Student ID-Random") %>% 
+  drop_na() %>% 
+  select(`Student ID-Random`) %>% 
+  mutate(Retention =1) 
+
+
+# Rename columns in data2
+colnames(data2) <- c("Student ID-Random", "Retention_Data")
+# Step 2: Create data1
+data1 <- data %>% 
+  mutate(Retention = 0)
+# Step 3: Combine 2 datasets
+combined_data2 <- data1 %>%
+  left_join(data2, by = "Student ID-Random") %>%
+  mutate(Retention = coalesce(Retention_Data, Retention)) %>%  # Override Retention with values from data2
+  select(-Retention_Data) 
+
+sample1 <- combined_data2 %>%
+  filter(Retention == "1") %>%
+  pivot_longer(cols = 12:33, names_to = "Credit", values_to = "Taken") %>%
+  filter(Taken == "1") %>%
+  group_by(`Student ID-Random`, Credit) %>%
+  summarise(Class_Count = n(), .groups = 'drop') %>% 
+  select(`Student ID-Random`,Credit, Class_Count)
+
+Total.finished <- length(unique(sample1$`Student ID-Random`))
+  
+
+#Create a list of CORE requirement
+CORE_requirements<-c( "CORE 100", "PHIL 100","THEO 111", "English", "language", "Lit and Moral Imagination", "Scientific Perspectives Lect","Scientific Perspectives Lab", "Nat Science Elect Lecture Core",
+                        "Nat Science Elect Lab Core","ERS Focus Elective", "Diversity Flag","Creative Perspectives","Historical Perspectives",
+                   "Mathematical Perspectives","Quantitative Reason Flag Full","Philosophy Perspectives",
+                       "Theology Perspectives","Social Science Elective Core", "Humanities Elective","Oral Communication Flag", "Writing Flag Core")
+#Create a function to check the list against the taken courses of students --> return the missing requirements
+check_fulfillment <- function(Credit) {
+  fulfilled <- CORE_requirements %in% Credit
+  unfulfilled_list <- CORE_requirements[!fulfilled]
+  return(unfulfilled_list)}
+# Apply the function and handle empty Missing_Details
+result <- sample1 %>%
+  group_by(`Student ID-Random`) %>% 
+  summarise(Missing_Details = unlist(check_fulfillment(Credit))) %>%
+  mutate(
+    Missing_Details = if_else(Missing_Details=="character(0)", "no transfer credit", Missing_Details)
+  ) %>%
+   ungroup() 
+result %>% 
+  group_by(Missing_Details) %>%
+  summarize(count = n(), .groups='drop') %>%
+  mutate(percentage=count/Total.finished*100) %>% #6391 is the total number of students who graduated from Xavier (with 4 years)
+  mutate(Missing_Details = reorder(Missing_Details, percentage, .desc = FALSE)) %>%
+  ggplot(aes(x = Missing_Details, y = percentage) ) +  # Corrected: use `y = count` instead of `x = Missing_Details`
+  geom_bar(stat = "identity",fill="skyblue") +
+  geom_text(aes(label=paste(round(percentage,1),"%") , hjust = -0.25))+
+  coord_flip() +
+  labs(x = "Tranferred requirements", y = "Percentage") +
+  theme_minimal()
+```
+
+There are two barplots below. The first shows the letter grades, withdrawals, and other outcomes of new freshmen in the six major categories. The second shows the GPA and DFW percentage of new freshmen in the six major categories.
+
+```{r}
+core_grades <- Data %>%
+  filter(`Cohort Code` == "NF") %>% 
+  filter(!is.na(Grade)) %>%
+  mutate(Grade = case_when(
+    Grade %in% c("A", "A-") ~ "A",
+    Grade %in% c("B+", "B", "B-") ~ "B",
+    Grade %in% c("C+", "C", "C-") ~ "C",
+    Grade %in% c("D+", "D") ~ "D",
+    Grade %in% c("F", "VF") ~ "F",
+    Grade == "W" ~ "W",
+    Grade %in% c("I", "AU", "S", "NR", "NA", "IP", "P") ~ "Other",
+    TRUE ~ NA_character_
+  )) %>%
+  filter(!is.na(Major)) %>%  
+  mutate(Group = case_when(
+    Major %in% c("MACS", "APPH", "BIOC", "BSFB", "BIOL", "BIMS", "BIOP", "CHEM", "CSCI", "DSCI", "ENVS", 
+                 "ECON", "MATH", "PHYS", "ENPH", "MATH", "PHYS", "CSCA") ~ "STEM",
+    Major %in% c("ADVT", "ARTS", "CLHU", "CMST", "DIF", "DIME", "ECSS", "ENGL", "FREN", "GDST", "GRAP", "HIST", 
+                 "INST", "MUED", "MUSC", "MUTR", "ORGL", "PHIL", "PPPU", "POLI", "PUBL", "SOCI", "SPAN", "THTR",
+                 "THED", "THEO") ~ "Humanities/Social Science",
+    Major %in% c("ACCT", "BAIS", "BUUN", "ECON", "ENTR", "FINC", "INBU", "MGMT", "MKTG") ~ "Business",
+    Major %in% c("ECED", "MCED", "MONT", "SPEC", "ELEM", "TLSC", "SEDU") ~ "Education",
+    Major %in% c("NURS", "NURE") ~ "Nursing",
+    Major %in% c("CJUS", "EXES", "HSEA", "PSYC", "SOCW", "SPMG", "SPMK") ~ "Other/CPS",
+    TRUE ~ NA_character_
+  ))
+
+# Calculate percentage of grades within each major group
+major_grade_summary <- core_grades %>%
+  drop_na(Grade, Group) %>% 
+  group_by(Group, Grade) %>%
+  summarize(Count = n()) %>%
+  mutate(Percentage = (Count / sum(Count)) * 100)
+
+# Bar plot
+ggplot(major_grade_summary, aes(x = Grade, y = Percentage, fill = Grade)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~ Group, scales = "free_y", ncol = 2) +  
+  labs(title = "Letter Grades of Students by Major Category",
+       y = "Percentage of Grades (%)",  
+       fill = "Grade") +
+  xlab("Letter Grades") +  
+  theme_minimal()
+
+### Major Group Grades, GPA, and DFW
+
+
+#Numerical values for grades
+grades_vector <- c("A" = 4, "A-" = 3.67, "B+" = 3.33, "B" = 3, 
+                   "B-" = 2.67, "C+" = 2.33, "C" = 2, "C-" = 1.67, 
+                   "D+" = 1.33, "D" = 1, "F" = 0, "VF" = 0, "W" = 0)
+
+#Grades and major groups
+core_grades <- Data %>%
+  filter(`Cohort Code` == "NF") %>% 
+  filter(!is.na(Grade)) %>%
+  mutate(Grade = case_when(
+    Grade %in% c("A", "A-") ~ "A",
+    Grade %in% c("B+", "B", "B-") ~ "B",
+    Grade %in% c("C+", "C", "C-") ~ "C",
+    Grade %in% c("D+", "D") ~ "D",
+    Grade %in% c("F", "VF") ~ "F",
+    Grade == "W" ~ "W",
+    #Grade %in% c("I", "AU", "S", "NR", "NA", "IP", "P") ~ "Other",
+    TRUE ~ NA_character_
+  )) %>%
+  filter(!is.na(Major)) %>%  
+  mutate(Group = case_when(
+    Major %in% c("MACS", "APPH", "BIOC", "BSFB", "BIOL", "BIMS", "BIOP", "CHEM", "CSCI", "DSCI", "ENVS", 
+                 "ECON", "MATH", "PHYS", "ENPH", "MATH", "PHYS", "CSCA") ~ "STEM",
+    Major %in% c("ADVT", "ARTS", "CLHU", "CMST", "DIF", "DIME", "ECSS", "ENGL", "FREN", "GDST", "GRAP", "HIST", 
+                 "INST", "MUED", "MUSC", "MUTR", "ORGL", "PHIL", "PPPU", "POLI", "PUBL", "SOCI", "SPAN", "THTR",
+                 "THED", "THEO") ~ "Humanities/Social Science",
+    Major %in% c("ACCT", "BAIS", "BUUN", "ECON", "ENTR", "FINC", "INBU", "MGMT", "MKTG") ~ "Business",
+    Major %in% c("ECED", "MCED", "MONT", "SPEC", "ELEM", "TLSC", "SEDU") ~ "Education",
+    Major %in% c("NURS", "NURE") ~ "Nursing",
+    Major %in% c("CJUS", "EXES", "HSEA", "PSYC", "SOCW", "SPMG", "SPMK") ~ "Other/CPS",
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(numerical_grade = grades_vector[Grade])
+
+# Calculate GPA and DFW percentages for each major group
+major_grade_summary <- core_grades %>%
+  filter(!is.na(Grade), !is.na(Group)) %>%
+  group_by(Group, Grade) %>%
+  summarize(Count = n()) %>%
+  mutate(Percentage = (Count / sum(Count)) * 100,
+         GPA = sum(grades_vector[Grade] * Count) / sum(Count),
+         DFW_Percentage = sum(Count[Grade %in% c("D+", "D", "F", "VF", "W")]) / sum(Count) * 100)
+
+plots_list <- list()
+
+for (group in unique(major_grade_summary$Group)) {
+  temp <- major_grade_summary %>%
+    filter(Group == group) %>%
+    ggplot(aes(x = Grade, y = Percentage, fill = Grade)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    labs(title = paste(group),
+         y = "Percentage of Grades (%)",
+         fill = "Grade") +
+    xlab("Letter Grades") +  
+    theme_minimal()
+  
+# Add GPA and DFW annotations
+  temp <- temp +
+    annotate("text", x = Inf, y = Inf, label = paste("GPA:", round(major_grade_summary$GPA[major_grade_summary$Group == group], 2)), 
+             hjust = 1.2, vjust = 1.1, size = 4.2, color = "black") +
+    annotate("text", x = Inf, y = Inf, label = paste("DFW:", round(major_grade_summary$DFW_Percentage[major_grade_summary$Group == group], 2), "%", sep = ''), 
+             hjust = 1.1, vjust = 2.5, size = 4.2, color = "black")
+  
+  plots_list[[group]] <- temp
+}
+
+# Combine plots side by side
+combined_plots <- wrap_plots(plots_list, ncol = 2)
+
+# Display combined plots
+combined_plots
+```
+
+Levi's graphs
+
+```{r}
+##recode major to find changed majors
+library(tidyverse)
+
+Data <- CoreRequirements2015_2023 %>%
+  group_by(`Student ID-Random`) %>%
+  mutate(MajorChange = if_else(n_distinct(Major) > 1, "Changed Major", "Did Not Change Major")) %>%
+  ungroup()
+
+## 
+semesterv2 <- select(Data, Major, Term, Degree, `Semester Number at Xavier`, MajorChange)
+
+# Ensure the column is character if it's a factor
+semesterv2$`Semester Number at Xavier` <- as.character(semesterv2$`Semester Number at Xavier`)
+
+# Convert to numeric
+semesterv2$`Semester Number at Xavier` <- as.numeric(semesterv2$`Semester Number at Xavier`)
+
+# Apply the mutation and save changes back to semesterv2
+semesterv2 <- semesterv2 %>%
+  mutate(`Semester Number at Xavier` = if_else(`Semester Number at Xavier` > 20, "Sum",
+                                               if_else(`Semester Number at Xavier` >= 9 & `Semester Number at Xavier` <= 20, "9+",
+                                                       as.character(`Semester Number at Xavier`))))
+
+# Filter rows with the values of `Major Changed` in the MajorChange column
+semesterv2 <- semesterv2 %>%
+  filter(MajorChange == "Did Not Change Major")
+
+
+semesterv2 <- semesterv2 %>%
+  group_by(MajorChange, `Semester Number at Xavier`) %>%
+  summarise(count = n()) %>%
+  mutate(percentage = count / sum(count) * 100)
+
+# Plot the data
+ggplot(semesterv2, aes(x = `Semester Number at Xavier`, y = percentage)) +
+  geom_bar(stat = "identity", fill = "blue", color = "black") +
+  labs(title = "Enrollment in Core Classes by semester", y = 'Percentage of core courses (%)') +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 20)) +
+  facet_wrap(~MajorChange)
+
+##more shit
+
+Data %>%
+  mutate(`Semester Number at Xavier` = 
+           case_when(
+             as.numeric(`Semester Number at Xavier`) > 8 ~ "9",
+             TRUE ~ `Semester Number at Xavier` # Default case, if none of the above conditions are met
+           )
+  ) %>% 
+  filter(!as.numeric(`Semester Number at Xavier`) > 200000) %>% 
+  pivot_longer(cols = 12:33, names_to = "Requirement", values_to = 'filled') %>% 
+  filter(filled == 1) %>% 
+  ggplot(aes(x = as.numeric(`Semester Number at Xavier`), y = reorder(Requirement, as.numeric(`Semester Number at Xavier`), mean))) + 
+  geom_boxplot(fill = 'lightblue', color = "black") +
+  labs(title = "Timing of core courses, 2015-2023 (All Xavier students)", x = "Semester at Xavier", y = "Core Curriculum Requirement") +
+  scale_x_continuous(breaks = seq(1, 9, by = 1)) +
+  facet_wrap(~ MajorChange)
+##
+
+Data %>%
+  mutate(`Semester Number at Xavier` = case_when(
+    as.numeric(`Semester Number at Xavier`) > 20000 ~ "Summer",
+    as.numeric(`Semester Number at Xavier`) > 8 ~ "9+",
+    TRUE ~ as.character(Data$`Semester Number at Xavier`))) %>%
+  filter(str_detect(`Semester Number at Xavier`, "Summer")) %>%
+  pivot_longer(12:33, names_to = "Credit", values_to = "Taken") %>%
+  filter(Taken == "1") %>%
+  mutate(Credit = factor(Credit, levels = unique(Credit))) %>%
+  group_by(Credit, MajorChange) %>%
+  summarize(count = n()) %>%
+  ungroup() %>%
+  mutate(count = (count) / sum(count) * 100) %>%
+  mutate(Credit = fct_reorder(Credit, count, .desc = FALSE)) %>%
+  ggplot(aes(x = Credit, y = count)) +
+  geom_bar(stat = "identity", fill = "lightblue", color = "black") +
+  geom_text(aes(label = round(count)), hjust = -0.5) +
+  labs(title = "Core Requirements Fulfilled During Summer", x = "Requirements", y = "Percentage of Students") +
+  coord_flip() +
+  facet_wrap(~ MajorChange)
+
+##
+
+#find how many students in language
+language <- Data %>% 
+  filter(language == "1")
+
+number_students = unique(Data$`Student ID-Random`) %in% unique(language$`Student ID-Random`)
+
+
+
+#find how many students not in language
+
+no.language = unique(Data$`Student ID-Random`)[!number_students]
+
+
+
+total_langcourse <- language %>% 
+  group_by(`Student ID-Random`) %>% 
+  summarise(total_rows = n())
+
+#give all students 0
+
+no_langcourse = cbind(no.language,0)
+
+
+
+#give no_langcourse same column names as total_langcourse
+
+colnames(no_langcourse) = colnames(total_langcourse)
+
+
+
+#bind total_langcourse and foo
+
+combination = rbind(total_langcourse, no_langcourse)
+
+
+
+
+
+##Total Language Requirement Credits Earned at Xavier Barplot (filtered by NF)
+
+#library(ggplot2)
+
+ggplot(data = combination, aes(x = total_rows))+
+  
+  geom_bar(fill = "pink", color = "black")+
+  
+  scale_x_discrete(breaks = seq(0,10, by =1))+
+  
+  geom_text(stat = 'count', aes(label= after_stat(count)), vjust = -.5)+
+  
+  labs(title = "Total Language Requirement Courses Attempted by Student", x = "Number of Attempted Language Courses", y = "Count of Students")+
+  
+  theme(plot.title = element_text(size = 18))+
+  
+  theme(axis.title.x = element_text(size = 15))+
+  
+  theme(axis.title.y = element_text(size = 15))+
+  
+  theme(axis.text.x = element_text(size = 12))+
+  
+  theme(axis.text.y = element_text(size = 12))+
+  facet_wrap(~MajorChange)
+
+```
